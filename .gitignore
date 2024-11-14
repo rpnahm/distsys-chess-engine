@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+blunder-8.5.5-*
 
 # Test binary, built with `go test -c`
 *.test
