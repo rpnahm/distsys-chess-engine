@@ -1,0 +1,6 @@
+# Ignore blunder binary files and log files
+
+blunder/blunder*
+blunder/log*
+/.idea
+/.vscode
