@@ -11,6 +11,7 @@ SERVER_SRC = $(SRC_PATH)/server/main.go
 CLIENT_SRC = $(SRC_PATH)/client/main.go
 STOCKFISH_PATH = Stockfish/src
 
+
 all: $(SERVER_BIN) $(CLIENT_BIN) $(STOCKFISH_BIN)
 
 server: $(SERVER_BIN) 
@@ -29,14 +30,17 @@ $(CLIENT_BIN): $(CLIENT_SRC) $(BINARY_PATH)
 $(SERVER_BIN): $(SERVER_SRC) $(BINARY_PATH)
 	$(GO) -o $@ $<
 
-$(STOCKFISH_BIN): 
+$(STOCKFISH_BIN): $(BINARY_PATH)
 	make -C $(STOCKFISH_PATH) -j profile-build
 	mv $(STOCKFISH_PATH)/stockfish $(STOCKFISH_BIN)
 
+$(BINARY_PATH):
+	mkdir -p $(BINARY_PATH)
+
 # doesn't requrie re-making stockfish
-clean:
+clean: $(BINARY_PATH)
 	find $(BINARY_PATH) -type f ! -name "stockfish" | xargs rm -f
 
 # removes all binaries
-clean-all:
+clean-all: $(BINARY_PATH)
 	rm -f $(BINARY_PATH)/*
