@@ -13,6 +13,16 @@ STOCKFISH_PATH = Stockfish/src
 
 all: $(SERVER_BIN) $(CLIENT_BIN) $(STOCKFISH_BIN)
 
+server: $(SERVER_BIN) 
+
+client: $(CLIENT_BIN)
+
+run-server: $(SERVER_BIN) $(STOCKFISH_BIN)
+	./$(SERVER_BIN)
+
+run-client: $(CLIENT_BIN)
+	./$(CLIENT_BIN)
+
 $(CLIENT_BIN): $(CLIENT_SRC) $(BINARY_PATH)
 	$(GO) -o $@ $<
 
