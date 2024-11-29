@@ -11,6 +11,8 @@ SERVER_SRC = $(SRC_PATH)/server/main.go
 CLIENT_SRC = $(SRC_PATH)/client/main.go
 STOCKFISH_PATH = Stockfish/src
 
+UTILS = pkg
+
 
 all: $(SERVER_BIN) $(CLIENT_BIN) $(STOCKFISH_BIN)
 
@@ -18,7 +20,7 @@ server: $(SERVER_BIN)
 
 client: $(CLIENT_BIN)
 
-run-server: $(SERVER_BIN) $(STOCKFISH_BIN)
+run-server: $(SERVER_BIN) # $(STOCKFISH_BIN) 
 	./$(SERVER_BIN)
 
 run-client: $(CLIENT_BIN)
@@ -27,7 +29,7 @@ run-client: $(CLIENT_BIN)
 $(CLIENT_BIN): $(CLIENT_SRC) $(BINARY_PATH)
 	$(GO) -o $@ $<
 
-$(SERVER_BIN): $(SERVER_SRC) $(BINARY_PATH)
+$(SERVER_BIN): $(SERVER_SRC) $(UTILS)/server/*  $(BINARY_PATH)
 	$(GO) -o $@ $<
 
 $(STOCKFISH_BIN): $(BINARY_PATH)
