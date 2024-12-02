@@ -11,10 +11,6 @@ import (
 	"github.com/rpnahm/distsys-chess-engine/pkg/common"
 )
 
-// global variables for catalog addresses and such
-var catalogAddr = "catalog.cse.nd.edu"
-var catalogPort = 9097
-
 type Worker struct {
 	name     string
 	listener net.Listener
@@ -121,7 +117,7 @@ func (w *Worker) CatalogMessage(owner, project string) {
 		log.Fatal("Error Marshalling Name-Server json", err)
 	}
 
-	nsAddressString := fmt.Sprintf("%s:%d", catalogAddr, catalogPort)
+	nsAddressString := fmt.Sprintf("%s:%d", common.CatalogAddr, common.CatalogPort)
 	nsAddress, err := net.ResolveUDPAddr("udp", nsAddressString)
 	if err != nil {
 		log.Fatal("Error resolving Name Server Address", err)

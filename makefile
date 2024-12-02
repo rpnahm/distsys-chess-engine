@@ -24,9 +24,9 @@ run-server: $(SERVER_BIN) $(STOCKFISH_BIN)
 	./$(SERVER_BIN) test-rnahm
 
 run-client: $(CLIENT_BIN)
-	./$(CLIENT_BIN)
+	./$(CLIENT_BIN) test-rnahm
 
-$(CLIENT_BIN): $(CLIENT_SRC) $(UTILS)/common/* $(BINARY_PATH)
+$(CLIENT_BIN): $(CLIENT_SRC) $(UTILS)/client/* $(UTILS)/common/* $(BINARY_PATH)
 	$(GO) -o $@ $<
 
 $(SERVER_BIN): $(SERVER_SRC) $(UTILS)/server/* $(UTILS)/common/* $(BINARY_PATH)
