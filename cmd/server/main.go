@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"os"
 
 	"github.com/rpnahm/distsys-chess-engine/pkg/server"
@@ -17,16 +16,13 @@ func main() {
 		log.Fatal("Usage: ./server <serverName>")
 	}
 
-	// set the server name
-	server.Name = os.Args[1]
-
-	ln, err := net.Listen("tcp", "0.0.0.0:0")
-	if err != nil {
-		log.Fatal("Error opening listner", err)
-	}
-	defer ln.Close()
+	// start the engine and server
+	worker := server.Startup()
+	worker.SetName(os.Args[1])
 
 	// Run a separate thread that communicates with the nameserver
-	go server.CatalogMessage(server.Name, "rnahm", "chess-engine", ln.Addr().(*net.TCPAddr))
+	go worker.CatalogMessage("rnahm", "chess-engine")
+
+	worker.Run()
 
 }

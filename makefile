@@ -20,21 +20,21 @@ server: $(SERVER_BIN)
 
 client: $(CLIENT_BIN)
 
-run-server: $(SERVER_BIN) # $(STOCKFISH_BIN) 
-	./$(SERVER_BIN)
+run-server: $(SERVER_BIN) $(STOCKFISH_BIN) 
+	./$(SERVER_BIN) test-rnahm
 
 run-client: $(CLIENT_BIN)
 	./$(CLIENT_BIN)
 
-$(CLIENT_BIN): $(CLIENT_SRC) $(BINARY_PATH)
+$(CLIENT_BIN): $(CLIENT_SRC) $(UTILS)/common/* $(BINARY_PATH)
 	$(GO) -o $@ $<
 
-$(SERVER_BIN): $(SERVER_SRC) $(UTILS)/server/*  $(BINARY_PATH)
+$(SERVER_BIN): $(SERVER_SRC) $(UTILS)/server/* $(UTILS)/common/* $(BINARY_PATH)
 	$(GO) -o $@ $<
 
 $(STOCKFISH_BIN): $(BINARY_PATH)
 	make -C $(STOCKFISH_PATH) -j profile-build
-	mv $(STOCKFISH_PATH)/stockfish $(STOCKFISH_BIN)
+	cp $(STOCKFISH_PATH)/stockfish $(STOCKFISH_BIN)
 
 $(BINARY_PATH):
 	mkdir -p $(BINARY_PATH)
