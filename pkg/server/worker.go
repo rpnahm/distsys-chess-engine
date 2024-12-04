@@ -127,6 +127,7 @@ func (w *Worker) handle() {
 			break
 		case "stop":
 			// Handle stop request
+			fmt.Println("stopping")
 			return
 		case "exit":
 			// Shut down server
@@ -145,7 +146,7 @@ func (w *Worker) newGame(data []byte) {
 	err := json.Unmarshal(data, &info)
 	if err != nil {
 		w.reportError(fmt.Sprint("Unable to decode new_game JSON, ", data, err))
-		log.Println("Unable to decode new_game JSON, ", err)
+		return
 	}
 
 	// Reset the posid (only matters within each game)
@@ -160,7 +161,7 @@ func (w *Worker) newGame(data []byte) {
 		// test for whitespace
 		if len(temp) > 2 {
 			w.reportError(fmt.Sprint("Unable to decode option: ", option_string))
-			log.Println("Unable to decode option: ", option_string)
+			return
 		}
 		if len(temp) == 2 {
 			options = append(options, uci.CmdSetOption{Name: temp[0], Value: temp[1]})
@@ -173,14 +174,14 @@ func (w *Worker) newGame(data []byte) {
 	err = w.eng.Run(options...)
 	if err != nil {
 		w.reportError(fmt.Sprint("Unable to run options", err))
-		log.Println("Unable to run options", err)
+		return
 	}
 
 	// Set a new game board
 	fen, err := chess.FEN(info.Position)
 	if err != nil {
 		w.reportError(fmt.Sprint("Unable to decode FEN string: ", info.Position, err))
-		log.Println("Unable to decode Fen string: ", info.Position, err)
+		return
 	}
 	// interpret the starting position
 	w.game = chess.NewGame(fen)
@@ -189,21 +190,10 @@ func (w *Worker) newGame(data []byte) {
 	err = w.eng.Run(uci.CmdUCINewGame, pos, uci.CmdIsReady)
 	if err != nil {
 		w.reportError(fmt.Sprint("Unable to run ucinewgame, position command on engine", err))
-		log.Println("Unable to run ucinewgame, position command on engine", err)
+		return
 	}
 
-	// Now the engine is correctly configured so we can return readyok
-	oJson := common.ReadyOk{
-		Type:  "ready_ok",
-		PosId: w.posId,
-	}
-	// skipping error checking because it's within our control
-	oData, _ := json.Marshal(&oJson)
-	// send to the client
-	_, err = w.conn.Write(oData)
-	if err != nil {
-		log.Println("Unable to send data to conn @ ", w.conn.RemoteAddr(), err)
-	}
+	w.readyOk()
 }
 
 // Handles parse_moves request in order to run the request on go
@@ -220,6 +210,7 @@ func (w *Worker) parseMoves(data []byte) {
 	// check pos_id (must be greater than or equal to existing pos_id)
 	if w.posId > input.PosId {
 		w.reportError(fmt.Sprint("Bad pos_id: ", input.PosId))
+		return
 	}
 	w.posId = input.PosId
 	w.jobId = input.JobId
@@ -260,7 +251,7 @@ func (w *Worker) parseMoves(data []byte) {
 	err = w.eng.Run(cmdPos, cmdGo)
 	if err != nil {
 		w.reportError(fmt.Sprint("Unable to run new job", err))
-		log.Println("Unable to run job", err)
+		return
 	}
 
 	// Now return the results
@@ -277,6 +268,7 @@ func (w *Worker) parseMoves(data []byte) {
 	_, err = w.conn.Write(rData)
 	if err != nil {
 		log.Println("Unable to send results", err)
+		return
 	}
 
 }
@@ -295,7 +287,31 @@ func (w *Worker) updatePos(fenStr string) (uci.CmdPosition, error) {
 // Set a new position of the game
 func (w *Worker) newPos(data []byte) {
 	// must unmarshall data first
-	_ = data
+	var input common.NewPos
+	err := json.Unmarshal(data, &input)
+	if err != nil {
+		w.reportError(fmt.Sprint("Unable to parse new_pos json:", err))
+		return
+	}
+	if input.PosId < w.posId {
+		w.reportError("Old pos_id")
+		return
+	} else if input.PosId > w.posId {
+		w.posId = input.PosId
+		w.updatePos(input.Position)
+	}
+	w.readyOk()
+
+}
+
+// Returns readyok message
+func (w *Worker) readyOk() {
+	o := common.ReadyOk{Type: "ready_ok", PosId: w.posId}
+	oData, _ := json.Marshal(o)
+	_, err := w.conn.Write(oData)
+	if err != nil {
+		w.reportError(fmt.Sprint("Error sending ready_ok", err))
+	}
 }
 
 // Function to stop the worker from considering the current case
@@ -303,7 +319,6 @@ func (w *Worker) Stop() {
 	err := w.eng.Run(uci.CmdStop)
 	if err != nil {
 		w.reportError(fmt.Sprint("Error stopping engine: ", err))
-		log.Println("Error stopping engine: ", err)
 	}
 }
 

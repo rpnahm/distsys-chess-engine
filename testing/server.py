@@ -37,6 +37,12 @@ def test_new_game(conn: socket.socket):
     conn.sendall(json.dumps(newGame).encode())
     print(conn.recv(1024).decode())
 
+    new_pos = {"type": "new_pos",
+               "position": "7R/5N1p/4k2p/pb2n1q1/4r1PP/P2PpP2/RKp1Q1B1/8 w - - 0 1",
+               "pos_id": 5}
+    conn.sendall(json.dumps(new_pos).encode())
+    print(conn.recv(1024).decode())
+
 def test_parse_moves(conn: socket.socket):
     print("Testing compute first step")
     newGame = {
@@ -56,7 +62,7 @@ def test_parse_moves(conn: socket.socket):
         "moves": ["a2a4", "b2b4", "c2c4", "d2d4", "e2e4"]
     }
     eastern = pytz.timezone("US/Eastern")
-    future = datetime.now(eastern) - timedelta(seconds=15)
+    future = datetime.now(eastern) + timedelta(seconds=15)
     parse_moves["due_time"] = future.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
     parse_moves["due_time"] = parse_moves["due_time"][:-2] + ":" + parse_moves["due_time"][-2:]
     print(f"Duetime: {parse_moves['due_time']}")
@@ -85,7 +91,16 @@ def main():
     conn.connect((ip, port))
     print(ip, port)
     
+    test_new_game(conn)
+
+    stop = {"type": "stop"}
+    sleep(2)
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn.connect((ip, port))
+
     test_parse_moves(conn)
+
+    
 
     sleep(1)
     data = {"type": "exit"}

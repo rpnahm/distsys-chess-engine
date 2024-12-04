@@ -62,6 +62,7 @@ type Results struct {
 type NewPos struct {
 	Type     string `json:"type"`
 	Position string `json:"position"`
+	PosId    int    `json:"pos_id"`
 }
 
 // Stop message: Signals to the server to close the connection
