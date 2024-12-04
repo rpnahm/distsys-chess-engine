@@ -96,11 +96,6 @@ func (w *Worker) handle() {
 	for {
 		n, err := w.conn.Read(buf)
 		if err != nil {
-			// If the read is empty for some reason, loop
-			if n == 0 {
-				continue
-			}
-
 			log.Println("Unable to read connection: ", err)
 			break
 		}
@@ -160,12 +155,17 @@ func (w *Worker) newGame(data []byte) {
 		// split the string by whitespace
 		temp := strings.Fields(option_string)
 		// test for whitespace
-		if len(temp) != 2 {
+		if len(temp) > 2 {
 			w.reportError(fmt.Sprint("Unable to decode option: ", option_string))
 			log.Println("Unable to decode option: ", option_string)
 		}
-		options = append(options, uci.CmdSetOption{Name: temp[0], Value: temp[1]})
+		if len(temp) == 2 {
+			options = append(options, uci.CmdSetOption{Name: temp[0], Value: temp[1]})
+		} else {
+			options = append(options, uci.CmdSetOption{Name: temp[0], Value: ""})
+		}
 	}
+
 	//now run the options on the engine
 	err = w.eng.Run(options...)
 	if err != nil {
