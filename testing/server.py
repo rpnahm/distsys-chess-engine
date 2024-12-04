@@ -2,6 +2,8 @@
 import sys 
 import socket, http.client, json
 from time import sleep
+from datetime import datetime, timedelta
+import pytz
 
 CatalogAddress = "catalog.cse.nd.edu"
 CatalogPort = 9097
@@ -35,6 +37,35 @@ def test_new_game(conn: socket.socket):
     conn.sendall(json.dumps(newGame).encode())
     print(conn.recv(1024).decode())
 
+def test_parse_moves(conn: socket.socket):
+    print("Testing compute first step")
+    newGame = {
+        "type": "new_game",
+        "options": [],
+        "position": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "pos_id": 0
+    }
+    conn.sendall(json.dumps(newGame).encode())
+    conn.recv(1024)
+
+    parse_moves = {
+        "type": "parse_moves",
+        "job_id": 0,
+        "position": newGame["position"],
+        "pos_id": newGame["pos_id"],
+        "moves": ["a2a4", "b2b4", "c2c4", "d2d4", "e2e4"]
+    }
+    eastern = pytz.timezone("US/Eastern")
+    future = datetime.now(eastern) - timedelta(seconds=15)
+    parse_moves["due_time"] = future.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+    parse_moves["due_time"] = parse_moves["due_time"][:-2] + ":" + parse_moves["due_time"][-2:]
+    print(f"Duetime: {parse_moves['due_time']}")
+    conn.sendall(json.dumps(parse_moves).encode())
+    print(conn.recv(1024).decode())
+    print(conn.recv(1024).decode())
+    
+
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: ./server.py <serverName>")
@@ -54,7 +85,7 @@ def main():
     conn.connect((ip, port))
     print(ip, port)
     
-    test_new_game(conn)
+    test_parse_moves(conn)
 
     sleep(1)
     data = {"type": "exit"}

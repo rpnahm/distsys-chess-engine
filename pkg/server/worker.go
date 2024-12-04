@@ -22,6 +22,7 @@ type Worker struct {
 	game     *chess.Game
 	conn     net.Conn
 	posId    int
+	jobId    int
 }
 
 // struct for json messages to catalog server
@@ -115,14 +116,15 @@ func (w *Worker) handle() {
 		case "new_game":
 			// Handle newgame request
 			w.newGame(buf[:n])
-			continue
+			break
 		case "parse_moves":
 			// Handle parsemoves request
-			continue
+			w.parseMoves(buf[:n])
+			break
 		case "new_pos":
 			// Handle newpos request
 			w.newPos(buf[:n])
-			continue
+			break
 		case "stop":
 			// Handle stop request
 			return
@@ -132,6 +134,7 @@ func (w *Worker) handle() {
 		default:
 			w.reportError(fmt.Sprint("Unknown message type: ", opType))
 		}
+		fmt.Println("Handled ", opType, " request")
 	}
 }
 
@@ -201,6 +204,92 @@ func (w *Worker) newGame(data []byte) {
 	if err != nil {
 		log.Println("Unable to send data to conn @ ", w.conn.RemoteAddr(), err)
 	}
+}
+
+// Handles parse_moves request in order to run the request on go
+func (w *Worker) parseMoves(data []byte) {
+	fmt.Println("Beginning to parse moves")
+	// decode json data
+	var input common.ParseMoves
+	err := json.Unmarshal(data, &input)
+	if err != nil {
+		w.reportError(fmt.Sprint("Unable to decode parse_moves json: ", err))
+		return
+	}
+
+	// check pos_id (must be greater than or equal to existing pos_id)
+	if w.posId > input.PosId {
+		w.reportError(fmt.Sprint("Bad pos_id: ", input.PosId))
+	}
+	w.posId = input.PosId
+	w.jobId = input.JobId
+
+	// create a new game with the current position
+	cmdPos, err := w.updatePos(input.Position)
+	if err != nil {
+		log.Println("Error parsing Fen:", err)
+	}
+
+	// make an array of moves to process
+	var movesToProcess []*chess.Move
+	for _, move := range input.Moves {
+		for _, posMove := range w.game.ValidMoves() {
+			if move == posMove.String() {
+				movesToProcess = append(movesToProcess, posMove)
+			}
+		}
+	}
+
+	// calculate time
+	processTime := time.Until(input.DueTime)
+	if processTime < 0 {
+		w.reportError(fmt.Sprintf("Process time was negative: %s - %s = %s", input.DueTime, time.Now(), processTime))
+		return
+	}
+	cmdGo := uci.CmdGo{MoveTime: processTime, SearchMoves: movesToProcess}
+
+	// Send Working notification
+	wMessage := common.Working{Type: "working", PosId: w.posId, JobId: w.jobId}
+	wData, _ := json.Marshal(wMessage)
+	_, err = w.conn.Write(wData)
+	if err != nil {
+		log.Println("Unable to send working message", err)
+	}
+
+	// run the commands
+	err = w.eng.Run(cmdPos, cmdGo)
+	if err != nil {
+		w.reportError(fmt.Sprint("Unable to run new job", err))
+		log.Println("Unable to run job", err)
+	}
+
+	// Now return the results
+	var rMessage common.Results
+	rMessage.Type = "results"
+	rMessage.JobId = w.jobId
+	rMessage.BestMove = w.eng.SearchResults().BestMove.String()
+	rMessage.Score = w.eng.SearchResults().Info.Score.CP
+	rMessage.Mate = w.eng.SearchResults().Info.Score.Mate
+	rMessage.Nodes = w.eng.SearchResults().Info.Nodes
+
+	// encode and send
+	rData, _ := json.Marshal(rMessage)
+	_, err = w.conn.Write(rData)
+	if err != nil {
+		log.Println("Unable to send results", err)
+	}
+
+}
+
+func (w *Worker) updatePos(fenStr string) (uci.CmdPosition, error) {
+	fen, err := chess.FEN(fenStr)
+	if err != nil {
+		w.reportError(fmt.Sprint("Error parsing Fen String:", err))
+		return uci.CmdPosition{}, err
+	}
+	w.game = chess.NewGame(fen)
+	cmdPos := uci.CmdPosition{Position: w.game.Position()}
+	return cmdPos, nil
 }
 
 // Set a new position of the game

@@ -54,6 +54,8 @@ type Results struct {
 	JobId    int    `json:"job_id"`
 	BestMove string `json:"best_move"`
 	Score    int    `json:"score"`
+	Mate     int    `json:"mate"`
+	Nodes    int    `json:"nodes"`
 }
 
 // NewPosition message: updates the position of the board
