@@ -6,6 +6,9 @@ import "time"
 	This file will contain different json formats
 	to help with json marshall and json unmarshalling.
 	*** All messages must start with a type value ***
+
+	Notices:
+		All position messages must be in FEN notation (notnils/chess )
 */
 
 // Error message: An error message to let the client know that the previous operation failed for some reason
@@ -16,10 +19,10 @@ type Error struct {
 
 // NewGame message: for signalling a newgame to the server
 type NewGame struct {
-	Type     string `json:"type"`
-	Options  string `json:"options"`
-	Position string `json:"position"`
-	PosId    int    `json:"pos_id"`
+	Type     string   `json:"type"`
+	Options  []string `json:"options"` // A list of strings of the format "name value" separated by a space
+	Position string   `json:"position"`
+	PosId    int      `json:"pos_id"`
 }
 
 // ReadyOk message: server confirming the position
@@ -60,6 +63,7 @@ type NewPos struct {
 }
 
 // Stop message: Signals to the server to close the connection
+// Can either contain type: stop or stop: exit depending on the need
 type Stop struct {
 	Type string `json:"type"`
 }
