@@ -268,7 +268,6 @@ func (c *Client) Run() (common.Results, error) {
 			break
 		}
 		// marshall and send the data
-		log.Println(messages[i])
 		data, err := json.Marshal(messages[i])
 		if err != nil {
 			log.Fatal("Unable to encode parse_moves json", err)

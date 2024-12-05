@@ -13,11 +13,13 @@ import (
 	"github.com/rpnahm/distsys-chess-engine/pkg/client"
 )
 
-/* This main file will be used to create a simple gui to play chess against. We will use another
-   go file to make a test script that will test the performance by running the cluster against a local
-   version of stockfish... notnils/chess has a lot of documentation on it. I'm also not sure how to redraw
-   the board in the same position so that we aren't creating something really long to scroll down in the terminal
-*/
+// *** UPDATES NEEDED ***
+// Client makes first move
+// re-print board after client and server move
+// num servers  + movetime => init arguments + command line
+// Endgame handling (print out final board state and result)
+
+// Later on: game select and such
 
 func main() {
 	fmt.Println("Hello from Client Main")
