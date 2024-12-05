@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 
+	"github.com/notnil/chess"
 	"github.com/notnil/chess/uci"
+
 	"github.com/rpnahm/distsys-chess-engine/pkg/client"
 )
 
@@ -22,8 +26,8 @@ func main() {
 		log.Fatal("Usage: ./server <BaseServerName>")
 	}
 
-	eng := client.Init(os.Args[1], 2)
-
+	eng := client.Init(os.Args[1], 1)
+	//eng.Game.UseNotation = *chess.NewGame()
 	err := eng.ConnectAll()
 	if err != nil {
 		log.Fatal("Unable to connect to all servers: ", err)
@@ -34,7 +38,36 @@ func main() {
 		log.Fatal(err)
 	}
 
-	eng.Game.MoveStr("e2e4")
+	for eng.Game.Outcome() == chess.NoOutcome {
+		reader := bufio.NewReader(os.Stdin)
+		// select a random move
+
+		eng.Run() //add error handling
+
+		//clear board before printing game state to avoid stacking boards
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+
+		fmt.Println(eng.Game.Position().Board().Draw())
+		for {
+			fmt.Printf("Enter a valid move:")
+			move, _ := reader.ReadString('\n')
+			move = move[:len(move)-1]
+			err = eng.Game.MoveStr(move)
+			if err != nil {
+				fmt.Println("Invalid move\nValid Moves:")
+				moves := eng.Game.ValidMoves()
+				for i := 0; i < len(moves); i++ {
+					fmt.Printf("%s\n", moves[i])
+				}
+				continue
+			} else {
+				break
+			}
+		}
+	}
+
 	err = eng.NewPos(*eng.Game.Position())
 	if err != nil {
 		log.Println("Unable to update position", err)
