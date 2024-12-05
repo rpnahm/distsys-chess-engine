@@ -23,9 +23,6 @@ client: $(CLIENT_BIN)
 run-server: $(SERVER_BIN)
 	./$(SERVER_BIN) test-rnahm-00
 
-run-servers: $(SERVER_BIN) 
-	./$(SERVER_BIN) test-rnahm-01
-
 run-client: $(CLIENT_BIN)
 	./$(CLIENT_BIN) test-rnahm
 

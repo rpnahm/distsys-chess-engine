@@ -22,14 +22,13 @@ type Client struct {
 	conns          []server
 	posId          int
 	jobId          int
-	TurnTime       int
+	TurnTime       time.Duration
 }
 
 // Stores connection information about each server
 type server struct {
 	name  string
 	conn  net.Conn
-	posId int
 	jobId int
 }
 
@@ -48,15 +47,21 @@ func Init(baseServer string, num int) *Client {
 	c.Game = *chess.NewGame()
 	for i := 0; i < c.numServers; i++ {
 		name := fmt.Sprintf("%s-%02d", c.baseServerName, i)
-		s := server{name: name, conn: nil, posId: 0, jobId: 0}
+		s := server{name: name, conn: nil, jobId: 0}
 		c.conns = append(c.conns, s)
+		c.TurnTime = time.Second * 15 // Should be set by argument later
 	}
 	return c
 }
 
 // Closes all connections
 func (c *Client) Shutdown() {
+	// stop message
+	o := common.Stop{Type: "stop"}
+	data, _ := json.Marshal(o)
+
 	for _, server := range c.conns {
+		server.conn.Write(data)
 		server.conn.Close()
 	}
 }
@@ -149,7 +154,6 @@ func (c *Client) NewGame(position chess.Position, options []uci.CmdSetOption) er
 		return err
 	}
 	return nil
-
 }
 
 // Sends the same message to all clients expects ReadyOk
@@ -159,8 +163,6 @@ func (c *Client) sendAll(data []byte) error {
 
 	for i, server := range c.conns {
 		// loop forever until sent
-		server.posId = c.posId
-		log.Println("Sending to server", server.name)
 		for {
 			for {
 				_, err := server.conn.Write(data)
@@ -190,7 +192,7 @@ func (c *Client) sendAll(data []byte) error {
 				// server error gets return
 				if response["type"] == "error" {
 					return &newError{Code: 1, Message: response["reason"].(string)}
-				} else if response["type"] == "ready_ok" && int(response["pos_id"].(float64)) == server.posId { // ready_ok continues
+				} else if response["type"] == "ready_ok" && int(response["pos_id"].(float64)) == c.posId { // ready_ok continues
 					break
 				} else { // random message gets a resend
 					continue
@@ -199,4 +201,56 @@ func (c *Client) sendAll(data []byte) error {
 		}
 	}
 	return nil
+}
+
+// updates the postition of all clients
+func (c *Client) NewPos(position chess.Position) error {
+	c.posId++
+	o := common.NewPos{
+		Type:     "new_pos",
+		Position: position.String(),
+		PosId:    c.posId,
+	}
+
+	// marshall the json
+	data, err := json.Marshal(o)
+	if err != nil {
+		return err
+	}
+
+	// send the messages and expect a readyok
+	err = c.sendAll(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Main function that handles server operations
+// Parses the current position, and returns the best move
+func (c *Client) Run() {
+	// build generic message
+	// calculate duetime because it is the same for all servers
+	base := common.ParseMoves{
+		Type:     "parse_moves",
+		Position: c.Game.FEN(),
+		PosId:    c.posId,
+	}
+
+	var messages []common.ParseMoves
+
+	// Get the list of possible moves
+
+	// Iterate over servers and build + send their messages while splitting up moves and incrementing jobid's
+
+	// listen for a working message from servers with a short timeout (have to reset after)
+	// if no working message, than resend Run message once
+
+	// listen for results message, combine them into some sort of datastructure and pick based off of score/mate
+
+	// Apply the chosen move to the game
+
+	// Update position at all of the servers
+
 }
