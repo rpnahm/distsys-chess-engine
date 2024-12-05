@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/notnil/chess/uci"
 	"github.com/rpnahm/distsys-chess-engine/pkg/client"
 )
 
@@ -15,7 +16,17 @@ func main() {
 		log.Fatal("Usage: ./server <BaseServerName>")
 	}
 
-	eng := client.Init(os.Args[1], 1)
+	eng := client.Init(os.Args[1], 2)
 
-	eng.Connect(0)
+	err := eng.ConnectAll()
+	if err != nil {
+		log.Fatal("Unable to connect to all servers: ", err)
+	}
+
+	err = eng.NewGame(*eng.Game.Position(), []uci.CmdSetOption{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Success")
+	eng.Shutdown()
 }
