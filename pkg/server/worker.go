@@ -239,14 +239,15 @@ func (w *Worker) parseMoves(data []byte) {
 	}
 	cmdGo := uci.CmdGo{MoveTime: processTime, SearchMoves: movesToProcess}
 
-	// Send Working notification
-	wMessage := common.Working{Type: "working", PosId: w.posId, JobId: w.jobId}
-	wData, _ := json.Marshal(wMessage)
-	_, err = w.conn.Write(wData)
-	if err != nil {
-		log.Println("Unable to send working message", err)
-	}
-
+	/*
+		// Send Working notification
+		wMessage := common.Working{Type: "working", PosId: w.posId, JobId: w.jobId}
+		wData, _ := json.Marshal(wMessage)
+		_, err = w.conn.Write(wData)
+		if err != nil {
+			log.Println("Unable to send working message", err)
+		}
+	*/
 	// run the commands
 	err = w.eng.Run(cmdPos, cmdGo)
 	if err != nil {
