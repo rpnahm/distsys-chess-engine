@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"time"
@@ -44,7 +45,8 @@ func (e *newError) Error() string {
 // intialize the Client struct for operations
 func Init(baseServer string, num int) *Client {
 	c := &Client{baseServerName: baseServer, numServers: num, posId: 0, jobId: 0}
-	c.Game = *chess.NewGame()
+
+	c.Game = *chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 	for i := 0; i < c.numServers; i++ {
 		name := fmt.Sprintf("%s-%02d", c.baseServerName, i)
 		s := server{name: name, conn: nil, jobId: 0}
@@ -229,28 +231,111 @@ func (c *Client) NewPos(position chess.Position) error {
 
 // Main function that handles server operations
 // Parses the current position, and returns the best move
-func (c *Client) Run() {
+func (c *Client) Run() (common.Results, error) {
 	// build generic message
 	// calculate duetime because it is the same for all servers
+	dueTime := time.Now().Add(c.TurnTime - 500*time.Millisecond)
 	base := common.ParseMoves{
 		Type:     "parse_moves",
 		Position: c.Game.FEN(),
 		PosId:    c.posId,
+		DueTime:  dueTime,
 	}
 
+	// create an array of messages for all servers
 	var messages []common.ParseMoves
+	for i := 0; i < c.numServers; i++ {
+		base.JobId = c.jobId + i
+		messages = append(messages, base)
+	}
 
 	// Get the list of possible moves
+	moves := c.Game.ValidMoves()
+	assignments := len(moves)
+	// Assign the moves to the servers
+	for i, move := range moves {
+		messages[i%c.numServers].Moves = append(messages[i%c.numServers].Moves, move.String())
+	}
 
 	// Iterate over servers and build + send their messages while splitting up moves and incrementing jobid's
+	// figure out how many messages there actually are
+	if assignments > c.numServers {
+		assignments = c.numServers
+	}
+	for i, server := range c.conns {
+		// break if the index is greater or equal to assignments
+		if i >= assignments {
+			break
+		}
+		// marshall and send the data
+		log.Println(messages[i])
+		data, err := json.Marshal(messages[i])
+		if err != nil {
+			log.Fatal("Unable to encode parse_moves json", err)
+		}
 
-	// listen for a working message from servers with a short timeout (have to reset after)
-	// if no working message, than resend Run message once
+		_, err = server.conn.Write(data)
+		if err != nil {
+			err = c.Connect(i)
+			if err != nil {
+				return common.Results{}, err
+			}
+		}
+	}
 
+	var results []common.Results
+	var result common.Results
 	// listen for results message, combine them into some sort of datastructure and pick based off of score/mate
+	// sleep until the deadline
+	time.Sleep(time.Until(dueTime.Add(500 * time.Millisecond)))
+	// Now perform all read results with very short blocking
+	buf := make([]byte, common.BufSize)
 
+	for i, server := range c.conns {
+		if i > assignments {
+			break
+		}
+
+		server.conn.SetReadDeadline(time.Now().Add(100 * time.Microsecond))
+		// ignore errors, just skip
+		n, err := server.conn.Read(buf)
+		if err != nil {
+			log.Println(err)
+		}
+		if n != 0 {
+			json.Unmarshal(buf[:n], &result)
+			results = append(results, result)
+		}
+		server.conn.SetReadDeadline(time.Time{})
+	}
+	fmt.Println(results)
+
+	// ouput results struct to handle testing
 	// Apply the chosen move to the game
+	// if results are empty
+	if len(results) == 0 {
+		// Choose a random move
+		move := moves[rand.Intn(len(moves))]
+		log.Println("No input from servers, choosing random move")
+		c.Game.Move(move)
+		return common.Results{}, nil
+	}
+	output := results[0]
+	// loop through results
+	for _, result := range results {
+		// update nodes visited
+		output.Nodes += result.Nodes
 
+		// select best_move
+		if output.Score < result.Score {
+			output.BestMove = result.BestMove
+			output.Score = result.Score
+			output.Mate = result.Mate
+		}
+	}
+
+	// apply the move
+	c.Game.MoveStr(output.BestMove)
 	// Update position at all of the servers
-
+	return output, nil
 }
