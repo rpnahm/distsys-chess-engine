@@ -98,14 +98,16 @@ func (c *Client) Connect(serverNum int) error {
 	newTime := 0.0
 	var newServerInfo map[string]interface{}
 	for _, value := range results {
-		if value["type"] == c.conns[serverNum].name && newTime < value["lastheardfrom"].(float64) {
-			newServerInfo = value
-			newTime = value["lastheardfrom"].(float64)
+		if value["type"] == "chess-worker" {
+			if value["project"] == c.conns[serverNum].name && newTime < value["lastheardfrom"].(float64) {
+				newServerInfo = value
+				newTime = value["lastheardfrom"].(float64)
+			}
 		}
 	}
 
 	// set the conn values to the correct state, and return
-	c.conns[serverNum].conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", newServerInfo["address"], newServerInfo["port"]))
+	c.conns[serverNum].conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", newServerInfo["address"], int(newServerInfo["port"].(float64))))
 	if err != nil {
 		c.conns[serverNum].conn = nil
 		log.Println("Unable to connect to server: ", newServerInfo)
