@@ -24,6 +24,7 @@ type Client struct {
 	posId          int
 	jobId          int
 	TurnTime       time.Duration
+	latencyBuff    time.Duration
 }
 
 // Stores connection information about each server
@@ -43,15 +44,16 @@ func (e *newError) Error() string {
 }
 
 // intialize the Client struct for operations
-func Init(baseServer string, num int) *Client {
-	c := &Client{baseServerName: baseServer, numServers: num, posId: 0, jobId: 0}
+func Init(baseServer string, numServers int, turnTime time.Duration, latency time.Duration) *Client {
+	c := &Client{baseServerName: baseServer, numServers: numServers, posId: 0, jobId: 0}
 
+	c.TurnTime = turnTime
+	c.latencyBuff = latency
 	c.Game = *chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 	for i := 0; i < c.numServers; i++ {
 		name := fmt.Sprintf("%s-%02d", c.baseServerName, i)
 		s := server{name: name, conn: nil, jobId: 0}
 		c.conns = append(c.conns, s)
-		c.TurnTime = time.Second * 15 // Should be set by argument later
 	}
 	return c
 }
@@ -106,6 +108,7 @@ func (c *Client) Connect(serverNum int) error {
 	c.conns[serverNum].conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", newServerInfo["address"], newServerInfo["port"]))
 	if err != nil {
 		c.conns[serverNum].conn = nil
+		log.Println("Unable to connect to server: ", newServerInfo)
 		return err
 	}
 	return nil
@@ -141,7 +144,7 @@ func (c *Client) NewGame(position chess.Position, options []uci.CmdSetOption) er
 	// add options to the message
 	var opts []string
 	for _, option := range options {
-		opts = append(opts, option.String())
+		opts = append(opts, fmt.Sprintf("%s %s", option.Name, option.Value))
 	}
 
 	o.Options = opts
@@ -234,7 +237,7 @@ func (c *Client) NewPos(position chess.Position) error {
 func (c *Client) Run() (common.Results, error) {
 	// build generic message
 	// calculate duetime because it is the same for all servers
-	dueTime := time.Now().Add(c.TurnTime - 500*time.Millisecond)
+	dueTime := time.Now().Add(c.TurnTime - c.latencyBuff)
 	base := common.ParseMoves{
 		Type:     "parse_moves",
 		Position: c.Game.FEN(),
@@ -286,7 +289,7 @@ func (c *Client) Run() (common.Results, error) {
 	var result common.Results
 	// listen for results message, combine them into some sort of datastructure and pick based off of score/mate
 	// sleep until the deadline
-	time.Sleep(time.Until(dueTime.Add(500 * time.Millisecond)))
+	time.Sleep(time.Until(dueTime.Add(c.latencyBuff)))
 	// Now perform all read results with very short blocking
 	buf := make([]byte, common.BufSize)
 
@@ -307,7 +310,6 @@ func (c *Client) Run() (common.Results, error) {
 		}
 		server.conn.SetReadDeadline(time.Time{})
 	}
-	fmt.Println(results)
 
 	// ouput results struct to handle testing
 	// Apply the chosen move to the game
