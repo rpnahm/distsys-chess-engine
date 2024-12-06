@@ -14,7 +14,7 @@ import (
 )
 
 // *** UPDATES NEEDED ***
-// Client makes first move
+
 // re-print board after client and server move
 // num servers  + movetime => init arguments + command line
 // Endgame handling (print out final board state and result)
@@ -24,8 +24,8 @@ import (
 func main() {
 	fmt.Println("Hello from Client Main")
 	// handle command line input
-	if len(os.Args) != 2 {
-		log.Fatal("Usage: ./server <BaseServerName>")
+	if len(os.Args) != 4 {
+		log.Fatal("Usage: ./server <BaseServerName> <num servers> <movetime>")
 	}
 
 	eng := client.Init(os.Args[1], 1)
@@ -44,7 +44,7 @@ func main() {
 		reader := bufio.NewReader(os.Stdin)
 		// select a random move
 
-		eng.Run() //add error handling
+		//add error handling
 
 		//clear board before printing game state to avoid stacking boards
 		cmd := exec.Command("clear")
@@ -68,6 +68,14 @@ func main() {
 				break
 			}
 		}
+
+		cmd = exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+
+		fmt.Println(eng.Game.Position().Board().Draw())
+
+		eng.Run()
 	}
 
 	err = eng.NewPos(*eng.Game.Position())
