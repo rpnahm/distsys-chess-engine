@@ -1,3 +1,4 @@
 # ignore executables inside the bin folder
 bin/*
 .vscode/
+*.log
