@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
+	"time"
 
 	"github.com/notnil/chess"
 	"github.com/notnil/chess/uci"
@@ -14,9 +16,8 @@ import (
 )
 
 // *** UPDATES NEEDED ***
-// Client makes first move
+
 // re-print board after client and server move
-// num servers  + movetime => init arguments + command line
 // Endgame handling (print out final board state and result)
 
 // Later on: game select and such
@@ -24,13 +25,20 @@ import (
 func main() {
 	fmt.Println("Hello from Client Main")
 	// handle command line input
-	if len(os.Args) != 2 {
-		log.Fatal("Usage: ./server <BaseServerName>")
+	if len(os.Args) != 4 {
+		log.Fatal("Usage: ./server <BaseServerName> <num servers> <turntime>")
 	}
-
-	eng := client.Init(os.Args[1], 1)
+	turntime, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatal("invalid turn time")
+	}
+	numservers, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatal("invalid turn time")
+	}
+	eng := client.Init(os.Args[1], numservers, time.Duration(turntime)*time.Millisecond, 50*time.Millisecond)
 	//eng.Game.UseNotation = *chess.NewGame()
-	err := eng.ConnectAll()
+	err = eng.ConnectAll()
 	if err != nil {
 		log.Fatal("Unable to connect to all servers: ", err)
 	}
@@ -44,7 +52,7 @@ func main() {
 		reader := bufio.NewReader(os.Stdin)
 		// select a random move
 
-		eng.Run() //add error handling
+		//add error handling
 
 		//clear board before printing game state to avoid stacking boards
 		cmd := exec.Command("clear")
@@ -68,12 +76,33 @@ func main() {
 				break
 			}
 		}
+
+		cmd = exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+
+		fmt.Println(eng.Game.Position().Board().Draw())
+
+		eng.Run()
 	}
 
-	err = eng.NewPos(*eng.Game.Position())
-	if err != nil {
-		log.Println("Unable to update position", err)
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+
+	fmt.Println(eng.Game.Position().Board().Draw())
+
+	fmt.Println(eng.Game.Outcome())
+	if eng.Game.Outcome() == "WhiteWon" {
+		fmt.Println("Checkmate. You Won!")
+	} else if eng.Game.Outcome() == "BlackWon" {
+		fmt.Println("Checkmate. You Lost.")
+	} else if eng.Game.Outcome() == "Draw" {
+		fmt.Println("Stalemate. You Tied!")
 	}
+
+	fmt.Println("Game Ended")
+
 	log.Println("Success")
 	eng.Shutdown()
 }
