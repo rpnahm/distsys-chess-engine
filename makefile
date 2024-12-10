@@ -7,22 +7,26 @@ SERVER_BIN = $(BINARY_PATH)/server
 CLIENT_BIN = $(BINARY_PATH)/client
 STOCKFISH_BIN = $(BINARY_PATH)/stockfish
 TEST_BIN = $(BINARY_PATH)/test
+LOCAL_BIN = $(BINARY_PATH)/local
 
 SERVER_SRC = $(SRC_PATH)/server/main.go
 CLIENT_SRC = $(SRC_PATH)/client/main.go
 TEST_SRC = $(SRC_PATH)/test/main.go
 STOCKFISH_PATH = Stockfish/src
+LOCAL_SRC = $(SRC_PATH)/local/main.go
 
 UTILS = pkg
 
 
-all: $(SERVER_BIN) $(CLIENT_BIN) $(STOCKFISH_BIN)
+all: $(SERVER_BIN) $(CLIENT_BIN) $(TEST_BIN) $(LOCAL_BIN) $(STOCKFISH_BIN)
 
 server: $(SERVER_BIN) 
 
 client: $(CLIENT_BIN)
 
 test: $(TEST_BIN)
+
+local: $(LOCAL_BIN)
 
 run-server: $(SERVER_BIN)
 	./$(SERVER_BIN) test-rnahm-00
@@ -40,6 +44,9 @@ $(SERVER_BIN): $(SERVER_SRC) $(UTILS)/server/* $(UTILS)/common/* $(BINARY_PATH)
 	$(GO) -o $@ $<
 
 $(TEST_BIN): $(TEST_SRC) $(UTILS)/client/* $(UTILS)/common/* $(BINARY_PATH)
+	$(GO) -o $@ $<
+
+$(LOCAL_BIN): $(LOCAL_SRC) 
 	$(GO) -o $@ $<
 	
 $(STOCKFISH_BIN): $(BINARY_PATH)
