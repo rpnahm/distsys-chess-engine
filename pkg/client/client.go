@@ -317,6 +317,7 @@ func (c *Client) Run() (common.Results, error) {
 		if err != nil {
 			log.Println(err)
 			c.conns[num].conn.Close()
+			c.conns[num].ready = false
 			go c.Connect(num)
 		}
 		if n != 0 {
