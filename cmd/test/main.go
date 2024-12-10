@@ -79,7 +79,7 @@ func main() {
 		// options
 		var options []uci.CmdSetOption
 		options = append(options, uci.CmdSetOption{Name: "Threads", Value: fmt.Sprint(nThreads)})
-		// options = append(options, uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint((10240 * nThreads))})
+		options = append(options, uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint((10240 * nThreads))})
 
 		err = localEng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame)
 		if err != nil {
