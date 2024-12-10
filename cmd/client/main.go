@@ -17,9 +17,6 @@ import (
 
 // *** UPDATES NEEDED ***
 
-// re-print board after client and server move
-// Endgame handling (print out final board state and result)
-
 // Later on: game select and such
 
 func main() {
@@ -64,13 +61,22 @@ func main() {
 			fmt.Printf("Enter a valid move:")
 			move, _ := reader.ReadString('\n')
 			move = move[:len(move)-1]
+			if move == "quit" {
+				log.Fatal("Game Ended, No Outcome")
+				eng.Shutdown()
+
+			}
 			err = eng.Game.MoveStr(move)
 			if err != nil {
+				cmd = exec.Command("clear")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
 				fmt.Println("Invalid move\nValid Moves:")
 				moves := eng.Game.ValidMoves()
 				for i := 0; i < len(moves); i++ {
 					fmt.Printf("%s\n", moves[i])
 				}
+				fmt.Println(eng.Game.Position().Board().Draw())
 				continue
 			} else {
 				break
@@ -93,11 +99,11 @@ func main() {
 	fmt.Println(eng.Game.Position().Board().Draw())
 
 	fmt.Println(eng.Game.Outcome())
-	if eng.Game.Outcome() == "WhiteWon" {
+	if eng.Game.Outcome() == chess.WhiteWon {
 		fmt.Println("Checkmate. You Won!")
-	} else if eng.Game.Outcome() == "BlackWon" {
+	} else if eng.Game.Outcome() == chess.BlackWon {
 		fmt.Println("Checkmate. You Lost.")
-	} else if eng.Game.Outcome() == "Draw" {
+	} else if eng.Game.Outcome() == chess.Draw {
 		fmt.Println("Stalemate. You Tied!")
 	}
 
