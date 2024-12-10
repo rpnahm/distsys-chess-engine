@@ -119,14 +119,14 @@ func (c *Client) Connect(serverNum int) error {
 	return nil
 }
 func (c *Client) ForeverConnect(i int) {
-	// Tries to connect for 10 s
+	// Tries to connect
 	for {
 		err := c.Connect(i)
-		if err != nil {
+		if err == nil {
 			break
 		}
 		log.Println("Trying to connect to server", i, "from foreverconnect")
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -192,10 +192,7 @@ func (c *Client) sendAll(data []byte) error {
 				_, err := c.conns[i].conn.Write(data)
 				if err != nil {
 					log.Println("Unable to send data to server:", i, c.conns[i].name, err, "retrying")
-					time.Sleep(common.Wait)
-					c.Connect(i)
-				} else {
-					break
+					continue
 				}
 			}
 
