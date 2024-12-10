@@ -156,7 +156,7 @@ func main() {
 				systemWins++
 			}
 		} else {
-			if client.Game.Outcome() == chess.BlackWon {
+			if client.Game.Outcome() == chess.WhiteWon {
 				systemWins++
 			} else {
 				systemLosses++
