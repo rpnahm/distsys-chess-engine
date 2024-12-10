@@ -215,6 +215,7 @@ func (c *Client) sendAll(data []byte) error {
 				} else if response["type"] == "ready_ok" && int(response["pos_id"].(float64)) == c.posId { // ready_ok continues
 					break
 				} else { // random message gets a resend
+					log.Println(response)
 					continue
 				}
 			}
