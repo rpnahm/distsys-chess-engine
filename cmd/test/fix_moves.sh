@@ -12,4 +12,4 @@ module load golang/1.20      # Required modules
  # Application to execute
 cd ~/distsys-chess-engine
 formatted_id=$(printf "%02d" "$((SGE_TASK_ID - 1))")
-./bin/server "fix-moves-long$formatted_id"
+./bin/server "fix-moves-long-$formatted_id"
