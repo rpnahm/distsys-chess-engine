@@ -46,7 +46,7 @@ func main() {
 	// games loop
 	// tracking information
 	systemWins, systemDraws, systemLosses := 0, 0, 0
-	cmdGo := uci.CmdGo{MoveTime: time.Second / 100}
+	cmdGo := uci.CmdGo{MoveTime: time.Second / 10}
 
 	fd, _ := os.OpenFile(fmt.Sprintf("localonly-%dgames.log", nGames), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	defer fd.Close()
