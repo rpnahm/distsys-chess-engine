@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Start up engines
-	fmt.Println("Starting up engines")
+	log.Println("Starting up engines")
 	client := client.Init(os.Args[1], nServers, turnTime, 50*time.Millisecond)
 
 	localEng, err := uci.New("bin/stockfish")
@@ -48,7 +48,7 @@ func main() {
 	defer localEng.Close()
 
 	// Connecting to all servers
-	fmt.Println("Connecting to all servers")
+	log.Println("Connecting to all servers")
 	err = client.ConnectAll()
 	if err != nil {
 		log.Fatal("Unable to connect to all servers", err)
@@ -64,16 +64,22 @@ func main() {
 	defer fd.Close()
 	fd.WriteString("ServerNodesProcessed, ClientNodesProcessed\n")
 
+	recordFd, err := os.OpenFile(fmt.Sprintf("%s-%d-%d-%d-record.log", os.Args[1], nServers, t, nThreads), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatal("Unable to open record log file", err)
+	}
+	defer recordFd.Close()
+
 	var results common.Results
 
-	fmt.Println("All servers connected")
+	log.Println("All servers connected")
 	// games loop
 	for game := 0; game < nGames; game++ {
 		//setup each game
 		// options
 		var options []uci.CmdSetOption
 		options = append(options, uci.CmdSetOption{Name: "Threads", Value: fmt.Sprint(nThreads)})
-		options = append(options, uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint((10240 * nThreads))})
+		// options = append(options, uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint((10240 * nThreads))})
 
 		err = localEng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame)
 		if err != nil {
@@ -88,9 +94,9 @@ func main() {
 			log.Fatal("Unable to run setoptions on local engine", err)
 		}
 
-		fmt.Println("Remotely creating a newgame")
 		client.Game = *chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 
+		log.Printf("Remotely creating newgame %d:\n", game)
 		err = client.NewGame(*client.Game.Position(), options)
 		if err != nil {
 			log.Fatal("Unable to start newgames on servers", err)
@@ -114,10 +120,16 @@ func main() {
 				}
 
 				// server move
-				results, _ = client.Run()
+				results, err = client.Run()
+				if err != nil {
+					log.Println(err)
+				}
 			} else {
 				// server move
-				results, _ = client.Run()
+				results, err = client.Run()
+				if err != nil {
+					log.Println(err)
+				}
 
 				if client.Game.Outcome() != chess.NoOutcome {
 					break
@@ -150,6 +162,7 @@ func main() {
 				systemLosses++
 			}
 		}
+		recordFd.WriteString(fmt.Sprintf("%d-%d-%d\n", systemWins, systemDraws, systemLosses))
 	}
 	fd.WriteString(fmt.Sprintf("Distributed Chess Record against Local Stockfish:\n%d-%d-%d\n", systemWins, systemDraws, systemLosses))
 }

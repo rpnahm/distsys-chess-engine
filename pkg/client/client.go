@@ -108,7 +108,8 @@ func (c *Client) Connect(serverNum int) error {
 	c.conns[serverNum].conn, err = net.Dial("tcp", fmt.Sprintf("%s:%s", newServerInfo["address"], newServerInfo["port"]))
 	if err != nil {
 		c.conns[serverNum].conn = nil
-		log.Println("Unable to connect to server: ", newServerInfo)
+		log.Println("Unable to connect to server: ", c.conns[serverNum].name)
+		log.Println(newServerInfo)
 		return err
 	}
 	return nil
