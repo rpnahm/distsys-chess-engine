@@ -38,7 +38,7 @@ func main() {
 
 	// Start up engines
 	log.Println("Starting up engines")
-	client := client.Init(os.Args[1], nServers, turnTime, 50*time.Millisecond)
+	client := client.Init(os.Args[1], nServers, turnTime, 100*time.Millisecond)
 
 	localEng, err := uci.New("bin/stockfish")
 	if err != nil {
