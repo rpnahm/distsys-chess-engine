@@ -120,11 +120,12 @@ func (c *Client) Connect(serverNum int) error {
 }
 func (c *Client) ForeverConnect(i int) {
 	// Tries to connect for 10 s
-	for n := 0; n < 10; n++ {
+	for {
 		err := c.Connect(i)
 		if err != nil {
 			break
 		}
+		log.Println("Trying to connect to server", i, "from foreverconnect")
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -181,15 +182,17 @@ func (c *Client) sendAll(data []byte) error {
 	buf := make([]byte, common.BufSize)
 	var response map[string]interface{}
 
-	for i, server := range c.conns {
+	for i, _ := range c.conns {
 		// loop forever until sent
 		for {
 			for {
-				_, err := server.conn.Write(data)
+				if !c.conns[i].ready {
+					c.ForeverConnect(i)
+				}
+				_, err := c.conns[i].conn.Write(data)
 				if err != nil {
-					log.Println("Unable to send data to server:", i, server.name, err, "retrying")
+					log.Println("Unable to send data to server:", i, c.conns[i].name, err, "retrying")
 					time.Sleep(common.Wait)
-					server.conn.Close()
 					c.Connect(i)
 				} else {
 					break
@@ -197,10 +200,10 @@ func (c *Client) sendAll(data []byte) error {
 			}
 
 			// Now get readyok
-			n, err := server.conn.Read(buf)
+			n, err := c.conns[i].conn.Read(buf)
 			if err != nil {
 				log.Println("Unable to recieve readyok from server", err)
-				server.conn.Close()
+				c.conns[i].conn.Close()
 				c.Connect(i)
 			} else {
 				// decode json
