@@ -114,14 +114,17 @@ func (c *Client) Connect(serverNum int) error {
 		log.Println("Unable to connect to server: ", c.conns[serverNum].name)
 		return err
 	}
-	log.Println("Server", c.conns[serverNum].conn.LocalAddr(), "ready")
+	log.Println("Server", c.conns[serverNum].conn.RemoteAddr(), "ready")
 	c.conns[serverNum].ready = true
 	return nil
 }
 func (c *Client) ForeverConnect(i int) {
 	// Tries to connect for 10 s
 	for n := 0; n < 10; n++ {
-		c.Connect(i)
+		err := c.Connect(i)
+		if err != nil {
+			break
+		}
 		time.Sleep(1 * time.Second)
 	}
 }
