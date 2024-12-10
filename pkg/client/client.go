@@ -194,6 +194,7 @@ func (c *Client) sendAll(data []byte) error {
 					log.Println("Unable to send data to server:", i, c.conns[i].name, err, "retrying")
 					continue
 				}
+				break
 			}
 
 			// Now get readyok
