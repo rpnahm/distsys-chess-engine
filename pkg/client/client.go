@@ -268,12 +268,10 @@ func (c *Client) Run() (common.Results, error) {
 	moves := c.Game.ValidMoves()
 	assignments := len(moves)
 	// Assign the moves to the servers
-	log.Println(moves)
 	for i, move := range moves {
 		messages[i%len(readyServers)].Moves = append(messages[i%len(readyServers)].Moves, move.String())
 	}
 
-	log.Println(messages)
 	// Iterate over servers and build + send their messages while splitting up moves and incrementing jobid's
 	// figure out how many messages there actually are
 	if assignments > len(readyServers) {
