@@ -187,7 +187,7 @@ func (c *Client) sendAll(data []byte) error {
 			for {
 				_, err := server.conn.Write(data)
 				if err != nil {
-					log.Println("Unable to send data to server:", i, err, "retrying")
+					log.Println("Unable to send data to server:", i, server.name, err, "retrying")
 					time.Sleep(common.Wait)
 					server.conn.Close()
 					c.Connect(i)
