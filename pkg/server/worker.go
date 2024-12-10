@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ type Worker struct {
 type message struct {
 	Type    string `json:"type"`
 	Owner   string `json:"owner"`
-	Port    string `json:"port"`
+	Port    int    `json:"port"`
 	Project string `json:"project"`
 }
 
@@ -344,12 +345,13 @@ func (w *Worker) reportError(errString string) {
 }
 
 // Send the server info to the catalog once per minute
-func (w *Worker) CatalogMessage(owner, project string) {
+func (w *Worker) CatalogMessage(owner string) {
+	port, _ := strconv.Atoi(w.port)
 	m := message{
-		Type:    w.name,
+		Type:    "chess-worker",
 		Owner:   owner,
-		Project: project,
-		Port:    w.port,
+		Project: w.name,
+		Port:    port,
 	}
 
 	// encode the json data
@@ -370,12 +372,17 @@ func (w *Worker) CatalogMessage(owner, project string) {
 		log.Fatal("Error connecting to Nameserver for posting:", err)
 	}
 	defer conn.Close()
-
+	fmt.Println(m)
 	for {
+		conn, err := net.Dial("udp", nsAddress.String())
+		if err != nil {
+			log.Fatal("Error connecting to Nameserver for posting:", err)
+		}
 		_, err = conn.Write(jsonData)
 		if err != nil {
 			log.Fatal("Error sending message to Nameserver", err)
 		}
+		conn.Close()
 		time.Sleep(1 * time.Minute)
 	}
 

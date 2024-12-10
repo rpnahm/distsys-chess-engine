@@ -21,7 +21,7 @@ func main() {
 	worker.SetName(os.Args[1])
 
 	// Run a separate thread that communicates with the nameserver
-	go worker.CatalogMessage("rnahm", "chess-engine")
+	go worker.CatalogMessage("rnahm")
 
 	worker.Run()
 
