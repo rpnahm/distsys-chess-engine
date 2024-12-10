@@ -268,10 +268,12 @@ func (c *Client) Run() (common.Results, error) {
 	moves := c.Game.ValidMoves()
 	assignments := len(moves)
 	// Assign the moves to the servers
+	log.Println(moves)
 	for i, move := range moves {
 		messages[i%len(readyServers)].Moves = append(messages[i%len(readyServers)].Moves, move.String())
 	}
 
+	log.Println(messages)
 	// Iterate over servers and build + send their messages while splitting up moves and incrementing jobid's
 	// figure out how many messages there actually are
 	if assignments > len(readyServers) {
@@ -290,9 +292,13 @@ func (c *Client) Run() (common.Results, error) {
 
 		_, err = c.conns[num].conn.Write(data)
 		if err != nil {
-			err = c.Connect(i)
-			if err != nil {
-				return common.Results{}, err
+			c.conns[num].conn.Close()
+			c.conns[num].ready = false
+			go c.Connect(num)
+
+			// pass along moves if possible
+			if i < len(readyServers)-1 {
+				messages[i+1].Moves = append(messages[i+1].Moves, messages[i].Moves...)
 			}
 		}
 	}
