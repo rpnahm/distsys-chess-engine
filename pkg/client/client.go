@@ -32,6 +32,7 @@ type server struct {
 	name  string
 	conn  net.Conn
 	jobId int
+	ready bool
 }
 
 type newError struct {
@@ -52,7 +53,7 @@ func Init(baseServer string, numServers int, turnTime time.Duration, latency tim
 	c.Game = *chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 	for i := 0; i < c.numServers; i++ {
 		name := fmt.Sprintf("%s-%02d", c.baseServerName, i)
-		s := server{name: name, conn: nil, jobId: 0}
+		s := server{name: name, conn: nil, jobId: 0, ready: false}
 		c.conns = append(c.conns, s)
 	}
 	return c
@@ -111,9 +112,9 @@ func (c *Client) Connect(serverNum int) error {
 	if err != nil {
 		c.conns[serverNum].conn = nil
 		log.Println("Unable to connect to server: ", c.conns[serverNum].name)
-		log.Println(newServerInfo)
 		return err
 	}
+	c.conns[serverNum].ready = true
 	return nil
 }
 
@@ -248,9 +249,17 @@ func (c *Client) Run() (common.Results, error) {
 		DueTime:  dueTime,
 	}
 
+	var readyServers []int
+	// find out how many servers are ready
+	for i, server := range c.conns {
+		if server.ready {
+			readyServers = append(readyServers, i)
+		}
+	}
+
 	// create an array of messages for all servers
 	var messages []common.ParseMoves
-	for i := 0; i < c.numServers; i++ {
+	for i := 0; i < len(readyServers); i++ {
 		base.JobId = c.jobId + i
 		messages = append(messages, base)
 	}
@@ -260,15 +269,15 @@ func (c *Client) Run() (common.Results, error) {
 	assignments := len(moves)
 	// Assign the moves to the servers
 	for i, move := range moves {
-		messages[i%c.numServers].Moves = append(messages[i%c.numServers].Moves, move.String())
+		messages[i%len(readyServers)].Moves = append(messages[i%len(readyServers)].Moves, move.String())
 	}
 
 	// Iterate over servers and build + send their messages while splitting up moves and incrementing jobid's
 	// figure out how many messages there actually are
-	if assignments > c.numServers {
-		assignments = c.numServers
+	if assignments > len(readyServers) {
+		assignments = len(readyServers)
 	}
-	for i, server := range c.conns {
+	for i, num := range readyServers {
 		// break if the index is greater or equal to assignments
 		if i >= assignments {
 			break
@@ -279,7 +288,7 @@ func (c *Client) Run() (common.Results, error) {
 			log.Fatal("Unable to encode parse_moves json", err)
 		}
 
-		_, err = server.conn.Write(data)
+		_, err = c.conns[num].conn.Write(data)
 		if err != nil {
 			err = c.Connect(i)
 			if err != nil {
@@ -296,22 +305,24 @@ func (c *Client) Run() (common.Results, error) {
 	// Now perform all read results with very short blocking
 	buf := make([]byte, common.BufSize)
 
-	for i, server := range c.conns {
+	for i, num := range readyServers {
 		if i > assignments {
 			break
 		}
 
-		server.conn.SetReadDeadline(time.Now().Add(100 * time.Microsecond))
+		c.conns[num].conn.SetReadDeadline(time.Now().Add(100 * time.Microsecond))
+		defer c.conns[num].conn.SetReadDeadline(time.Time{})
 		// ignore errors, just skip
-		n, err := server.conn.Read(buf)
+		n, err := c.conns[num].conn.Read(buf)
 		if err != nil {
 			log.Println(err)
+			c.conns[num].conn.Close()
+			go c.Connect(num)
 		}
 		if n != 0 {
 			json.Unmarshal(buf[:n], &result)
 			results = append(results, result)
 		}
-		server.conn.SetReadDeadline(time.Time{})
 	}
 
 	// ouput results struct to handle testing
@@ -326,15 +337,17 @@ func (c *Client) Run() (common.Results, error) {
 	}
 	output := results[0]
 	// loop through results
-	for _, result := range results {
-		// update nodes visited
-		output.Nodes += result.Nodes
+	if len(results) > 1 {
+		for _, result := range results {
+			// update nodes visited
+			output.Nodes += result.Nodes
 
-		// select best_move
-		if output.Score < result.Score {
-			output.BestMove = result.BestMove
-			output.Score = result.Score
-			output.Mate = result.Mate
+			// select best_move
+			if output.Score < result.Score {
+				output.BestMove = result.BestMove
+				output.Score = result.Score
+				output.Mate = result.Mate
+			}
 		}
 	}
 
