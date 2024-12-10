@@ -114,8 +114,16 @@ func (c *Client) Connect(serverNum int) error {
 		log.Println("Unable to connect to server: ", c.conns[serverNum].name)
 		return err
 	}
+	log.Println("Server", c.conns[serverNum].conn.LocalAddr(), "ready")
 	c.conns[serverNum].ready = true
 	return nil
+}
+func (c *Client) ForeverConnect(i int) {
+	// Tries to connect for 10 s
+	for n := 0; n < 10; n++ {
+		c.Connect(i)
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // Connect to all servers
@@ -292,7 +300,7 @@ func (c *Client) Run() (common.Results, error) {
 		if err != nil {
 			c.conns[num].conn.Close()
 			c.conns[num].ready = false
-			go c.Connect(num)
+			go c.ForeverConnect(num)
 
 			// pass along moves if possible
 			if i < len(readyServers)-1 {
