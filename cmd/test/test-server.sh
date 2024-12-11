@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Runs 16 2 core servers on the CRC machines 
 
 #$ -pe smp 2         # Specify parallel environment and legal core size
 #$ -q long           # Specify queue
@@ -12,4 +13,4 @@ module load golang/1.20      # Required modules
  # Application to execute
 cd ~/distsys-chess-engine
 formatted_id=$(printf "%02d" "$((SGE_TASK_ID - 1))")
-./bin/server "short-buf-$formatted_id"
+./bin/server "test-$formatted_id"

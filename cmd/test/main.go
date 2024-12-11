@@ -13,6 +13,15 @@ import (
 	"github.com/rpnahm/distsys-chess-engine/pkg/common"
 )
 
+/*  This file runs a series of games based on the inputs and reports the number of nodes
+considered by the local/remote engines and the record of the remote engine.
+All of these statistics are reported in log files that follow the following naming scheme:
+nodes considered:
+	servername-nservers-turnTime(ms)-nThreads.log
+record:
+	servername-nservers-turnTime(ms)-nThreads-record.log
+*/
+
 func main() {
 	// handle command line input
 	if len(os.Args) != 6 {
@@ -94,6 +103,7 @@ func main() {
 			log.Fatal("Unable to run setoptions on local engine", err)
 		}
 
+		// Create the newgame
 		client.Game = *chess.NewGame(chess.UseNotation(chess.UCINotation{}))
 
 		log.Printf("Remotely creating newgame %d:\n", game)
@@ -102,16 +112,16 @@ func main() {
 			log.Fatal("Unable to start newgames on servers", err)
 		}
 
-		fmt.Println("Entering Game Loop")
+		log.Println("Entering Game Loop")
 		// game loop
 		for client.Game.Outcome() == chess.NoOutcome {
 			// Local Move
 			if game%2 == 0 {
-
+				// local engine goes first
 				cmdPos := uci.CmdPosition{Position: client.Game.Position()}
 				cmdGo := uci.CmdGo{MoveTime: turnTime}
 				localEng.Run(cmdPos, cmdGo)
-
+				// apply move
 				move := localEng.SearchResults().BestMove
 				client.Game.Move(move)
 
@@ -125,7 +135,7 @@ func main() {
 					log.Println(err)
 				}
 			} else {
-				// server move
+				// server goes first
 				results, err = client.Run()
 				if err != nil {
 					log.Println(err)
@@ -142,11 +152,14 @@ func main() {
 				move := localEng.SearchResults().BestMove
 				client.Game.Move(move)
 			}
+			// write out the nodes considered
 			fd.WriteString(fmt.Sprintf("%d, %d\n", results.Nodes, localEng.SearchResults().Info.Nodes))
 
 		}
 
 		log.Println(client.Game.Outcome(), client.Game.Method(), len(client.Game.MoveHistory()), "moves")
+
+		// update record totals
 		if client.Game.Outcome() == chess.Draw {
 			systemDraws++
 		} else if game%2 == 0 {

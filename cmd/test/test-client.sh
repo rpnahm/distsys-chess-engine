@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# run a series of tests on the test servers
 
 #$ -M rnahm@nd.edu   # Email address for job notification
 #$ -m abe            # Send mail when job begins, ends and aborts
@@ -13,8 +14,10 @@ module load golang/1.20      # Required modules
 
  # Application to execute
 cd ~/distsys-chess-engine
-./bin/test short-buf 1  1000 10 1
-./bin/test short-buf 2  1000 10 1
-./bin/test short-buf 4  1000 10 1
-./bin/test short-buf 8  1000 10 1
-./bin/test short-buf 16 1000 10 1
+
+# running with between 1 and 16 cores for 10 games with 1000ms turnTime, and a single threaded engine
+./bin/test test 1  1000 10 1
+./bin/test test 2  1000 10 1
+./bin/test test 4  1000 10 1
+./bin/test test 8  1000 10 1
+./bin/test test 16 1000 10 1
