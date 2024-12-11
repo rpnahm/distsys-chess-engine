@@ -1,5 +1,10 @@
 package client
 
+/*
+This package contains all of the methods and structures to run the client side
+of our system
+*/
+
 import (
 	"encoding/json"
 	"fmt"
@@ -35,6 +40,7 @@ type server struct {
 	ready bool
 }
 
+// struct for custom errors
 type newError struct {
 	Code    int
 	Message string
@@ -115,9 +121,12 @@ func (c *Client) Connect(serverNum int) error {
 		return err
 	}
 	log.Println("Server", c.conns[serverNum].conn.RemoteAddr(), "ready")
+	// set the ready flag to true so this server can be assigned work
 	c.conns[serverNum].ready = true
 	return nil
 }
+
+// connect to each server forever (usually run from a goroutine)
 func (c *Client) ForeverConnect(i int) {
 	// Tries to connect
 	for {
@@ -134,6 +143,9 @@ func (c *Client) ForeverConnect(i int) {
 func (c *Client) ConnectAll() error {
 	for i := 0; i < c.numServers; i++ {
 		err := http.ErrAbortHandler
+		// try to connect to each server twice on startup:
+		// don't want to run forever without all working servers at least
+		// at the beginning
 		tried := false
 		for err != nil {
 			err = c.Connect(i)
@@ -307,7 +319,7 @@ func (c *Client) Run() (common.Results, error) {
 			c.conns[num].ready = false
 			go c.ForeverConnect(num)
 
-			// pass along moves if possible
+			// pass along moves to next server if possible
 			if i < len(readyServers)-1 {
 				messages[i+1].Moves = append(messages[i+1].Moves, messages[i].Moves...)
 			}
@@ -356,6 +368,8 @@ func (c *Client) Run() (common.Results, error) {
 	output := results[0]
 	// loop through results
 	if len(results) > 1 {
+		// reset the nodes for total
+		output.Nodes = 0
 		for _, result := range results {
 			// update nodes visited
 			output.Nodes += result.Nodes
@@ -371,6 +385,5 @@ func (c *Client) Run() (common.Results, error) {
 
 	// apply the move
 	c.Game.MoveStr(output.BestMove)
-	// Update position at all of the servers
 	return output, nil
 }
