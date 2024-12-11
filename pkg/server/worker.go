@@ -1,5 +1,10 @@
 package server
 
+/*
+This package allows us to run the server side and communicate with the
+chess engine
+*/
+
 import (
 	"encoding/json"
 	"fmt"
