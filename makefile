@@ -32,10 +32,10 @@ run-server: $(SERVER_BIN)
 	./$(SERVER_BIN) test-rnahm-00
 
 run-client: $(CLIENT_BIN)
-	./$(CLIENT_BIN) test-rnahm
+	./$(CLIENT_BIN) test-rnahm 1 1000
 
 run-test: $(TEST_BIN)
-	./$(TEST_BIN) rnahm 2 3 10 1
+	./$(TEST_BIN) test-rnahm 1 1000 10 1
 
 $(CLIENT_BIN): $(CLIENT_SRC) $(UTILS)/client/* $(UTILS)/common/* $(BINARY_PATH)
 	$(GO) -o $@ $<
