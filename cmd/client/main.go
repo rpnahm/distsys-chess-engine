@@ -15,8 +15,6 @@ import (
 	"github.com/rpnahm/distsys-chess-engine/pkg/client"
 )
 
-// *** UPDATES NEEDED ***
-
 // Later on: game select and such
 
 func main() {
@@ -33,12 +31,14 @@ func main() {
 	if err != nil {
 		log.Fatal("invalid turn time")
 	}
+
+	// Initialize the servers and their connections
 	eng := client.Init(os.Args[1], numservers, time.Duration(turntime)*time.Millisecond, 50*time.Millisecond)
-	//eng.Game.UseNotation = *chess.NewGame()
 	err = eng.ConnectAll()
 	if err != nil {
 		log.Fatal("Unable to connect to all servers: ", err)
 	}
+
 newgame:
 	//start new game
 	err = eng.NewGame(*eng.Game.Position(), []uci.CmdSetOption{})
@@ -85,6 +85,7 @@ newgame:
 			}
 		}
 
+		// clear terminal
 		cmd = exec.Command("clear")
 		cmd.Stdout = os.Stdout
 		cmd.Run()

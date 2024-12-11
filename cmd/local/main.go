@@ -12,7 +12,9 @@ import (
 )
 
 // This runs stockfish against itself
-// should be run with 12 cores
+// should be run with 14 total cores
+// Runs a 1 core engine vs 12 core engine
+// Apportions ~10GB of mem per core for the hash table
 
 func main() {
 	if len(os.Args) != 2 {
@@ -22,6 +24,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Usage: ./bin/local <numGames>")
 	}
+
+	// start engines
 	weak, err1 := uci.New("bin/stockfish")
 	strong, err2 := uci.New("bin/stockfish")
 	if err1 != nil || err2 != nil {
@@ -31,6 +35,8 @@ func main() {
 	defer strong.Close()
 
 	storagePerThread := 10240
+
+	// store all of the info in lists of cmds
 
 	var options1 []uci.Cmd
 	options1 = append(options1, uci.CmdUCI)
@@ -52,7 +58,7 @@ func main() {
 	defer fd.Close()
 
 	for i := 0; i < nGames; i++ {
-		// startup engines
+		// startup engines (configure options)
 		weak.Run(options1...)
 		strong.Run(options2...)
 		game := chess.NewGame()
@@ -61,6 +67,7 @@ func main() {
 		for game.Outcome() == chess.NoOutcome {
 			// slow move first
 			cmdPos := uci.CmdPosition{Position: game.Position()}
+			// Alternate which plays white for fairness
 			if i%2 == 0 {
 				weak.Run(cmdPos, cmdGo)
 				game.Move(weak.SearchResults().BestMove)
@@ -85,6 +92,7 @@ func main() {
 				game.Move(weak.SearchResults().BestMove)
 			}
 		}
+		// handle outcome to counter (depends on who went first)
 		if game.Outcome() == chess.Draw {
 			systemDraws++
 		} else if i%2 == 0 {
@@ -94,7 +102,7 @@ func main() {
 				systemWins++
 			}
 		} else {
-			if game.Outcome() == chess.BlackWon {
+			if game.Outcome() == chess.WhiteWon {
 				systemWins++
 			} else {
 				systemLosses++

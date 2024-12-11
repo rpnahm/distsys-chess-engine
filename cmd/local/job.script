@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script is mean to run a test of 12 threaded vs single threaded stockfish 
+# where both engines are running on the same machine
+
 #$ -M rnahm@nd.edu   # Email address for job notification
 #$ -m abe            # Send mail when job begins, ends and aborts
 #$ -pe smp 14         # Specify parallel environment and legal core size
