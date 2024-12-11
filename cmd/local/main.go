@@ -34,7 +34,7 @@ func main() {
 	defer weak.Close()
 	defer strong.Close()
 
-	storagePerThread := 10240
+	storagePerThread := 1024
 
 	// store all of the info in lists of cmds
 
@@ -42,11 +42,11 @@ func main() {
 	options1 = append(options1, uci.CmdUCI)
 	options1 = append(options1, uci.CmdIsReady)
 	options1 = append(options1, uci.CmdUCINewGame)
-	options1 = append(options1, uci.CmdSetOption{Name: "Threads", Value: string(1)})
+	options1 = append(options1, uci.CmdSetOption{Name: "Threads", Value: fmt.Sprint(1)})
 	options1 = append(options1, uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint(storagePerThread * 1)})
 
 	options2 := options1
-	options2[3] = uci.CmdSetOption{Name: "Threads", Value: string(12)}
+	options2[3] = uci.CmdSetOption{Name: "Threads", Value: fmt.Sprint(12)}
 	options2[4] = uci.CmdSetOption{Name: "Hash", Value: fmt.Sprint(storagePerThread * 12)}
 
 	// games loop
@@ -65,7 +65,7 @@ func main() {
 
 		// Game loop
 		for game.Outcome() == chess.NoOutcome {
-			// slow move first
+      // slow move first
 			cmdPos := uci.CmdPosition{Position: game.Position()}
 			// Alternate which plays white for fairness
 			if i%2 == 0 {
@@ -79,7 +79,7 @@ func main() {
 				cmdPos = uci.CmdPosition{Position: game.Position()}
 				strong.Run(cmdPos, cmdGo)
 				game.Move(strong.SearchResults().BestMove)
-			} else {
+			  } else {
 				strong.Run(cmdPos, cmdGo)
 				game.Move(strong.SearchResults().BestMove)
 

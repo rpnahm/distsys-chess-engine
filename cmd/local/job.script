@@ -15,6 +15,6 @@ module load golang/1.20      # Required modules
 
  # Application to execute
 cd ~/distsys-chess-engine
-./bin/local 2
+./bin/local 200
 
 
